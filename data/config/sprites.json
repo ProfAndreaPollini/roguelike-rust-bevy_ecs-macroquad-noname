@@ -1,0 +1,46 @@
+{
+    "sprites": {
+        "assets/urizen_onebit_tileset__v1d0.png": [
+            {
+                "name": "wall",
+                "pos": [
+                    0,
+                    0
+                ]
+            },
+            {
+                "name": "floor",
+                "pos": [
+                    2,
+                    0
+                ]
+            },
+            {
+                "name": "wall2",
+                "pos": [
+                    2,
+                    2
+                ]
+            },
+            {
+                "name": "hero",
+                "pos": [
+                    0,
+                    17
+                ]
+            }
+        ]
+    },
+    "defaults": {
+        "assets/urizen_onebit_tileset__v1d0.png": {
+            "gap": [
+                1,
+                1
+            ],
+            "size": [
+                12,
+                12
+            ]
+        }
+    }
+}

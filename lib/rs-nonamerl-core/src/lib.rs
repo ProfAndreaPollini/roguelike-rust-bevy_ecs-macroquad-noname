@@ -3,12 +3,34 @@ use macroquad::prelude::{IVec2, UVec2};
 
 mod geometry;
 
-pub use geometry::*;
+mod action;
+mod camera;
+mod map;
+mod renderer;
+mod sprite;
+mod tile;
+mod user_input;
 
-type IntVector2 = IVec2;
+pub mod prelude {
+    pub use crate::action::*;
+    pub use crate::camera::*;
+    pub use crate::geometry::*;
+    pub use crate::map::*;
+    pub use crate::renderer::*;
+    pub use crate::sprite::*;
+    pub use crate::tile::*;
+    pub use crate::user_input::*;
 
-#[derive(Debug, Copy, Clone)]
-struct Dimension2(UVec2);
+    pub use crate::camera::Camera;
+    pub use crate::tile::FovOccluder;
+}
+
+// use prelude::*;
+
+pub type IntVector2 = IVec2;
+
+#[derive(Debug, Copy, Clone, Default)]
+pub struct Dimension2(UVec2);
 
 impl Dimension2 {
     pub fn new(width: u32, height: u32) -> Self {
@@ -32,7 +54,7 @@ impl Dimension2 {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Default)]
 /// A generic struct representing an AABB dimension in 2D space.
 ///
 /// This struct is used to represent the size of a cell in a grid.

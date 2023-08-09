@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use morton_encoding::{morton_decode, morton_encode};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::IntVector2;
 
@@ -16,49 +16,52 @@ pub trait Plane<T> {
     fn neighbors(&self, pos: IntVector2) -> Vec<IntVector2>; // TODO: Maybe it is better to return a slice
 }
 
-/// A encoder for points on a 2d plane. It uses a morton encoding to encode the points.
-pub trait PositionEncoder {
-    fn encode(&self) -> u64;
-    fn translate(val: i32) -> u32;
-}
+// /// A encoder for points on a 2d plane. It uses a morton encoding to encode the points.
+// pub trait PositionEncoder {
+//     fn encode(self) -> u64;
+//     fn translate(val: i32) -> u32;
+// }
 
-pub trait PositionDecoder {
-    fn decode(self) -> IntVector2;
-    fn untranslate(val: u32) -> i32;
-}
+// pub trait PositionDecoder {
+//     fn decode(self) -> IntVector2;
+//     fn untranslate(val: u32) -> i32;
+// }
 
-impl PositionEncoder for IntVector2 {
-    fn encode(&self) -> u64 {
-        // (v.x() + v.y() * 1000) as u32
-        morton_encode([Self::translate(self.x), Self::translate(self.y)])
-    }
+// impl PositionEncoder for IntVector2 {
+//     fn encode(self) -> u64 {
+//         // (v.x() + v.y() * 1000) as u32
+//         // println!("encode: {:?}", self);
+//         morton_encode([Self::translate(self.x), Self::translate(self.y)])
+//     }
 
-    #[inline]
-    fn translate(val: i32) -> u32 {
-        let v = val as i64;
-        (v + i32::MAX as i64) as u32
-    }
-}
+//     #[inline]
+//     fn translate(val: i32) -> u32 {
+//         let v = val as i64;
+//         let out = (v + i32::MAX as i64) as u32;
+//         // println!("translate: {:?} -> {:?}", val, out);
+//         out
+//     }
+// }
 
-impl PositionDecoder for u64 {
-    fn decode(self) -> IntVector2 {
-        let [x, y] = morton_encoding::morton_decode(self);
-        IntVector2::new(Self::untranslate(x), Self::untranslate(y))
-    }
+// impl PositionDecoder for u64 {
+//     fn decode(self) -> IntVector2 {
+//         let [x, y] = morton_decode(self);
+//         IntVector2::new(Self::untranslate(x), Self::untranslate(y))
+//     }
 
-    #[inline]
-    fn untranslate(val: u32) -> i32 {
-        let v = val as i64;
-        (v - i32::MAX as i64) as i32
-    }
-}
+//     #[inline]
+//     fn untranslate(val: u32) -> i32 {
+//         let v = val as i64;
+//         (v - i32::MAX as i64) as i32
+//     }
+// }
 
 #[derive(Clone, Debug)]
 pub struct LatticeGrid2D<T>
 where
     T: Clone,
 {
-    data: HashMap<u64, T>,
+    data: HashMap<IntVector2, T>,
 }
 
 impl<T: Clone> LatticeGrid2D<T> {
@@ -66,6 +69,14 @@ impl<T: Clone> LatticeGrid2D<T> {
         Self {
             data: HashMap::new(),
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
     }
 }
 
@@ -86,15 +97,17 @@ impl<T: Clone> std::fmt::Display for LatticeGrid2D<T> {
 
 impl<T: Clone> Plane<T> for LatticeGrid2D<T> {
     fn at(&self, position: IntVector2) -> Option<&T> {
-        self.data.get(&position.encode())
+        let encoded = position; //.encode();
+        self.data.get(&encoded)
     }
 
     fn at_mut(&mut self, position: IntVector2) -> Option<&mut T> {
-        self.data.get_mut(&position.encode())
+        self.data.get_mut(&position) //.encode())
     }
 
     fn put(&mut self, pos: IntVector2, value: T) {
-        self.data.insert(pos.encode(), value);
+        // self.data.insert(pos.encode(), value);
+        self.data.insert(pos, value);
     }
 
     fn neighbors(&self, pos: IntVector2) -> Vec<IntVector2> {
@@ -105,7 +118,7 @@ impl<T: Clone> Plane<T> for LatticeGrid2D<T> {
                     continue;
                 }
                 let neighbor = IntVector2::new(pos.x + x, pos.y + y);
-                if let Some(_) = self.at(neighbor) {
+                if self.at(neighbor).is_some() {
                     neighbors.push(neighbor);
                 }
             }
@@ -182,6 +195,14 @@ pub fn bresenham_line(
 #[cfg(test)]
 
 mod tests {
+    // #[test]
+    // fn test_encode_decode() {
+    //     use super::*;
+    //     let origin = IntVector2::new(0, 0);
+    //     let encoded = origin.encode();
+    //     let decoded = encoded.decode();
+    //     assert_eq!(origin, decoded);
+    // }
 
     #[test]
     fn test_lattice_grid() {
@@ -216,5 +237,37 @@ mod tests {
         assert_eq!(grid.at_mut(IntVector2::new(1, 1)), Some(&mut 4));
 
         assert_eq!(grid.at(IntVector2::new(2, 2)), None);
+    }
+
+    #[test]
+    fn test_line() {
+        use super::*;
+        let mut grid = LatticeGrid2D::<i32>::new();
+        grid.put(IntVector2::new(0, 0), 1);
+        grid.put(IntVector2::new(1, 0), 2);
+        grid.put(IntVector2::new(0, 1), 3);
+        grid.put(IntVector2::new(1, 1), 4);
+
+        let line = grid.line(IntVector2::new(0, 0), IntVector2::new(1, 1));
+        assert_eq!(line, vec![IntVector2::new(0, 0), IntVector2::new(1, 1)]);
+
+        let line = grid.line(IntVector2::new(0, 0), IntVector2::new(0, 1));
+        assert_eq!(line, vec![IntVector2::new(0, 0), IntVector2::new(0, 1)]);
+
+        let line = grid.line(IntVector2::new(0, 0), IntVector2::new(1, 0));
+        assert_eq!(line, vec![IntVector2::new(0, 0), IntVector2::new(1, 0)]);
+
+        let line = grid.line(IntVector2::new(0, 0), IntVector2::new(0, 0));
+        assert_eq!(line, vec![IntVector2::new(0, 0)]);
+
+        let line = grid.line(IntVector2::new(0, 0), IntVector2::new(0, 2));
+        assert_eq!(
+            line,
+            vec![
+                IntVector2::new(0, 0),
+                IntVector2::new(0, 1),
+                IntVector2::new(0, 2)
+            ]
+        );
     }
 }
