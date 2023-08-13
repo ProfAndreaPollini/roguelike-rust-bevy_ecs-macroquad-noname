@@ -1,30 +1,39 @@
+#![allow(dead_code)]
+
 use bevy_ecs::{
     prelude::Entity,
     query::With,
-    system::{Query, Res, ResMut},
+    system::{Commands, Query, Res, ResMut},
     world::{self, World},
 };
 use macroquad::{prelude::Vec2, window::screen_height};
+
+use std::{error::Error, io};
+use tracing::{debug, error, info, span, warn, Level};
+
 use rs_nonamerl_core::{
     prelude::{
-        EntityAction, EntityActionQueue, EntityActivatorFunctionResult, FovOccluder, GameMap,
-        KeyInput, MapCommand, MapCommands, MoveActionParams, TestCamera2D, UserInput, Walkable,
+        EntityAction, EntityActionQueue, EntityActivatorFunctionResult, EntityQueue, FovOccluder,
+        GameMap, KeyInput, MapCommand, MapCommands, MoveActionParams, TestCamera2D, UserInput,
+        Walkable,
     },
     IntVector2,
 };
 
 use crate::{
-    components::{Health, Player, Position},
+    components::{Health, MoveIntent, Player, Position},
     tiles::TestTile,
     FovData,
 };
 
 pub fn update_player_position(
     user_input: Res<UserInput>,
-    mut action_queue: ResMut<EntityActionQueue>,
-    game_map: Res<GameMap<TestTile>>,
-    player_query: Query<(Entity, &Position), (With<Player>)>,
+    // mut action_queue: ResMut<EntityActionQueue>,
+    _game_map: Res<GameMap<TestTile>>,
+    player_query: Query<(Entity, &Position), With<Player>>,
+    mut commands: Commands,
 ) {
+    let _span = tracy_client::span!();
     // let mut position = player_query.single_mut();
     let (player_id, position) = player_query.single();
     let mut dx = IntVector2::default();
@@ -45,48 +54,33 @@ pub fn update_player_position(
     }
 
     if dx != IntVector2::default() {
-        action_queue.add(EntityAction::Move(
-            MoveActionParams {
-                dx,
-                start: IntVector2::new(position.x, position.y),
-                entity: player_id,
-            },
-            Some(|params| EntityActivatorFunctionResult::Ok),
-        ));
-    }
-}
-
-pub fn process_actions(
-    mut action_queue: ResMut<EntityActionQueue>,
-    mut game_map: ResMut<GameMap<TestTile>>,
-    mut entities: Query<&mut Position>,
-    mut health: Query<&mut Health>,
-) {
-    if let Some(action) = action_queue.process_one(&game_map) {
-        match action {
-            EntityAction::Move(params, _) => {
-                let mut position = entities.get_mut(params.entity).unwrap();
-                position.x = params.start.x + params.dx.x;
-                position.y = params.start.y + params.dx.y;
-            }
-
-            EntityAction::TakeDamage(params) => {
-                println!("take damage action: {:?}", params);
-                let mut health = health.get_mut(params.target).unwrap();
-                health.current -= params.damage;
-            }
-
-            _ => {}
-        }
+        println!(
+            "target: {:?}",
+            IntVector2::new(position.x + dx.x, position.y + dx.y)
+        );
+        commands.entity(player_id).insert(MoveIntent {
+            target: IntVector2::new(position.x + dx.x, position.y + dx.y),
+        });
+        // action_queue.add(EntityAction::Move(
+        //     MoveActionParams {
+        //         dx,
+        //         start: IntVector2::new(position.x, position.y),
+        //         entity: player_id,
+        //         // target_entity: None,
+        //         // target_items: vec![],
+        //     },
+        //     None, // Some(|params| EntityActivatorFunctionResult::Ok),
+        // ));
     }
 }
 
 pub fn update_camera(
     mut camera: ResMut<TestCamera2D>,
-    user_input: Res<UserInput>,
+    // user_input: Res<UserInput>,
     // viewport: Res<Viewport>,
     player_query: Query<&Position, With<Player>>,
 ) {
+    let _span = tracy_client::span!("update_camera");
     let position = player_query.single();
     // let mouse_state = user_input.mouse_state;
     // let mouse_position = Vec2::new(mouse_state.x, mouse_state.y);
@@ -120,13 +114,13 @@ pub fn update_camera(
     //     camera.center_on_world_point(mouse_world_position, &viewport);
     // }
 
-    let zoom = user_input.mouse_state.scroll;
-    if zoom != 0.0 {
-        // println!("zoom: {:?}", zoom);
-        let zoom_scale = 1.0 + zoom / (10.0 * screen_height());
-        camera.zoom_scale *= zoom_scale;
-        // camera.center_on_fixed_world_point(world_x, world_y, &viewport)
-    }
+    // let zoom = user_input.mouse_state.scroll;
+    // if zoom != 0.0 {
+    //     // println!("zoom: {:?}", zoom);
+    //     let zoom_scale = 1.0 + zoom / (10.0 * screen_height());
+    //     camera.zoom_scale *= zoom_scale;
+    //     // camera.center_on_fixed_world_point(world_x, world_y, &viewport)
+    // }
     camera.update();
     //let camera_pos = camera.position.clone();
 }
@@ -137,6 +131,7 @@ pub fn update_fov(
     player_query: Query<&Position, With<Player>>,
     mut commands: ResMut<MapCommands>,
 ) {
+    let _span = tracy_client::span!("update_fov");
     let position = player_query.single();
     let fov_size = fov_data.fov_size;
     let start_pos = IntVector2::new(position.x, position.y);

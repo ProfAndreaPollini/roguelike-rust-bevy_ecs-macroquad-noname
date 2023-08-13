@@ -1,6 +1,7 @@
 use bevy_ecs::{
     query::With,
     system::{Query, Res},
+    world::World,
 };
 use macroquad::{
     hash,
@@ -20,19 +21,26 @@ pub fn debug_ui(
     camera: Res<TestCamera2D>,
     game_map: Res<GameMap<TestTile>>,
     player_query: Query<(&Position, &Health), With<Player>>,
+    world: &World,
 ) {
+    tracy_client::Client::running()
+        .expect("client must be running")
+        .plot(
+            tracy_client::plot_name!("entities"),
+            world.entities().len() as f64,
+        );
     // ui::root_ui().push_skin(&skin1);
     let (position, health) = player_query.single();
     let visibile_cells = camera.visible_tiles_extent;
-    for x in visibile_cells.left()..visibile_cells.right() {
-        for y in visibile_cells.top()..visibile_cells.bottom() {
-            let tile = game_map.get(x, y);
-            if tile.is_none() {
-                continue;
-            }
-            let tile = tile.unwrap();
-        }
-    }
+    // for x in visibile_cells.left()..visibile_cells.right() {
+    //     for y in visibile_cells.top()..visibile_cells.bottom() {
+    //         let tile = game_map.get(x, y);
+    //         if tile.is_none() {
+    //             continue;
+    //         }
+    //         let tile = tile.unwrap();
+    //     }
+    // }
     let player_tile = game_map.get(position.x, position.y);
 
     let mouse_pos = Vec2::new(user_input.mouse_state.x, user_input.mouse_state.y);

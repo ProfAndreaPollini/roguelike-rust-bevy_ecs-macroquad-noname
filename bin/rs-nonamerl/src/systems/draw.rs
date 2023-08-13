@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use bevy_ecs::{
     query::With,
     system::{Query, Res},
@@ -6,9 +8,10 @@ use macroquad::prelude::Color;
 use rs_nonamerl_core::prelude::{
     GameMap, RenderOp, Renderer, SpriteContainer, TestCamera2D, Viewport,
 };
+use tracy_client::frame_mark;
 
 use crate::{
-    components::{Player, Position, SpriteDrawInfo},
+    components::{Enemy, Player, Position, SpriteDrawInfo},
     tiles::TestTile,
     FovData,
 };
@@ -33,6 +36,7 @@ pub fn draw_game_map(
     }
 
     renderer.batch_render(&camera, &viewport, &sprites, &map_batch);
+    frame_mark();
 }
 
 pub fn draw_player(
@@ -55,9 +59,29 @@ pub fn draw_player(
     renderer.batch_render(&camera, &viewport, &sprites, &player_batch);
 }
 
-pub fn draw_fov(fov_data: Res<FovData>, camera: Res<TestCamera2D>, viewport: Res<Viewport>) {
+pub fn draw_enemies(
+    enemies_q: Query<(&Position, &SpriteDrawInfo), With<Enemy>>,
+    camera: Res<TestCamera2D>,
+    viewport: Res<Viewport>,
+    sprites: Res<SpriteContainer>,
+) {
     let renderer = Renderer::from_map_cell_size(camera.cell_size);
-    let mut fov_batch = Vec::<RenderOp<TestTile>>::new();
+    let mut player_batch = Vec::<RenderOp<TestTile>>::new();
+
+    for (position, sprite_draw_info) in enemies_q.iter() {
+        player_batch.push(RenderOp::DrawEntity(
+            position.x,
+            position.y,
+            sprite_draw_info.sprite_info,
+        ));
+    }
+
+    renderer.batch_render(&camera, &viewport, &sprites, &player_batch);
+}
+
+pub fn draw_fov(fov_data: Res<FovData>, camera: Res<TestCamera2D>, _viewport: Res<Viewport>) {
+    let renderer = Renderer::from_map_cell_size(camera.cell_size);
+    // let mut fov_batch = Vec::<RenderOp<TestTile>>::new();
 
     // for cell in fov_data.current_fov_cells.iter() {
     //     fov_batch.push(RenderOp::HighlightCell(cell.x(), cell.y()));

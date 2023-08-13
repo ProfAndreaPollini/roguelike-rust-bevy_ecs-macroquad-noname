@@ -1,7 +1,4 @@
-use std::{
-    cell::RefCell,
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
 use bevy_ecs::{prelude::Entity, system::Resource};
 
@@ -11,11 +8,15 @@ use crate::{
 
 mod builder;
 mod command;
+mod room;
+mod room_builder;
 
 mod noise_builder;
 
 pub use builder::*;
 pub use command::*;
+pub use room::*;
+pub use room_builder::*;
 
 pub use noise_builder::*;
 
@@ -26,10 +27,10 @@ pub struct GameMap<T: Tile> {
 }
 
 impl<T: Tile> GameMap<T> {
-    pub fn new(size: Dimension2) -> Self {
+    pub fn new() -> Self {
         Self {
             grid: Arc::new(RwLock::new(LatticeGrid2D::new())),
-            size,
+            size: Dimension2::new(0, 0),
         }
     }
 
@@ -55,9 +56,9 @@ impl<T: Tile> GameMap<T> {
         self.grid.write().unwrap().put(IntVector2::new(x, y), tile);
     }
 
-    pub fn size(&self) -> Dimension2 {
-        self.size
-    }
+    // pub fn size(&self) -> Dimension2 {
+    //     self.size
+    // }
 
     pub fn len(&self) -> usize {
         self.grid.read().unwrap().len()

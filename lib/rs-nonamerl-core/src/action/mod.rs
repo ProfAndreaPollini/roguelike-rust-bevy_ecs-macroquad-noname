@@ -9,6 +9,26 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct ActionRequest<R> {
+    pub params: R,
+    pub activate: ActionRequestActivationFn<R>,
+}
+
+pub type ActionRequestActivationFn<R> = fn(R) -> EntityActivatorFunctionResult;
+
+impl<R> ActionRequest<R> {
+    pub fn new(params: R, activate: ActionRequestActivationFn<R>) -> Self {
+        Self { params, activate }
+    }
+
+    pub fn activate<T: Tile>(&self, _game_map: &GameMap<T>) -> EntityActivatorFunctionResult {
+        EntityActivatorFunctionResult::Ok
+    }
+}
+
+
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct AttackActionParams {
     target: i32,
 }
@@ -62,12 +82,11 @@ impl EntityAction {
                 if let Some(f) = f {
                     return f(params.clone());
                 }
-                print!("move action activated: {:?}", params);
+                // print!("move action activated: {:?}", params);
 
                 let desired_position = params.start + params.dx;
                 if let Some(tile) = game_map.get(desired_position.x, desired_position.y) {
                     if !tile.is_walkable() {
-                        println!("tile blocked");
                         return EntityActivatorFunctionResult::Alternate(EntityAction::TakeDamage(
                             TakeDamageActionParams {
                                 target: params.entity,
