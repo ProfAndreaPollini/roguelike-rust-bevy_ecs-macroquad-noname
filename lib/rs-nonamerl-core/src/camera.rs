@@ -70,11 +70,11 @@ impl Camera for Camera2D {
     }
 
     fn move_right(&mut self, amount: f32) {
-        self.position.x += amount as f32 * self.cell_size.width() as f32 * self.zoom_scale as f32;
+        self.position.x += amount * self.cell_size.width() as f32 * self.zoom_scale;
     }
 
     // Metodo per posizionare la camera in modo tale da avere il punto specifico al centro del FOV
-    fn center_on_world_point(&mut self, target: Vec2, viewport: &Viewport) {
+    fn center_on_world_point(&mut self, target: Vec2, _viewport: &Viewport) {
         let (target_x, target_y) = target.into();
         let (fov_width, fov_height) = self.fov.into();
         //let camera_relative = target - (self.fov * self.zoom_scale) / 2.0;
@@ -362,7 +362,7 @@ mod tests {
             height: 30.0,
         };
 
-        let mut camera =
+        let camera =
             TestCamera2D::from_viewport(Vec2::default(), &viewport, 1.0, Dimension2::new(10, 10));
 
         let extent = camera.visible_tiles_extent;

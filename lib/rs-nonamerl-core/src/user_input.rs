@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use bevy_ecs::system::Resource;
 use macroquad::prelude::{
     get_last_key_pressed, is_mouse_button_down, mouse_position, mouse_wheel, KeyCode, MouseButton,
@@ -15,6 +17,23 @@ pub enum KeyInput {
     CtrlKey(KeyCode),
     AltKey(KeyCode),
     ShiftKey(KeyCode),
+}
+
+impl Display for KeyInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KeyInput::None => write!(f, "None"),
+            KeyInput::Up => write!(f, "Up"),
+            KeyInput::Down => write!(f, "Down"),
+            KeyInput::Left => write!(f, "Left"),
+            KeyInput::Right => write!(f, "Right"),
+            KeyInput::Quit => write!(f, "Quit"),
+            KeyInput::Key(key) => write!(f, "Key({:?})", key),
+            KeyInput::CtrlKey(key) => write!(f, "CtrlKey({:?})", key),
+            KeyInput::AltKey(key) => write!(f, "AltKey({:?})", key),
+            KeyInput::ShiftKey(key) => write!(f, "ShiftKey({:?})", key),
+        }
+    }
 }
 
 impl Default for KeyInput {
@@ -53,7 +72,11 @@ impl UserInput {
                 KeyCode::W | KeyCode::Up => KeyInput::Up,
                 KeyCode::S | KeyCode::Down => KeyInput::Down,
                 KeyCode::Escape => KeyInput::Quit,
-                _ => KeyInput::None,
+                KeyCode::LeftControl | KeyCode::RightControl => KeyInput::CtrlKey(key),
+                KeyCode::LeftAlt | KeyCode::RightAlt => KeyInput::AltKey(key),
+                KeyCode::LeftShift | KeyCode::RightShift => KeyInput::ShiftKey(key),
+
+                _ => KeyInput::Key(key),
             },
         };
 

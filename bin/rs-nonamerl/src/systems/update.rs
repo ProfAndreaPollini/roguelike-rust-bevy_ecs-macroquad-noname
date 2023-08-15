@@ -1,27 +1,21 @@
 #![allow(dead_code)]
 
 use bevy_ecs::{
-    prelude::Entity,
+    prelude::{Entity, EventWriter},
     query::With,
     system::{Commands, Query, Res, ResMut},
-    world::{self, World},
 };
-use macroquad::{prelude::Vec2, window::screen_height};
-
-use std::{error::Error, io};
-use tracing::{debug, error, info, span, warn, Level};
+use macroquad::prelude::{KeyCode, Vec2};
 
 use rs_nonamerl_core::{
-    prelude::{
-        EntityAction, EntityActionQueue, EntityActivatorFunctionResult, EntityQueue, FovOccluder,
-        GameMap, KeyInput, MapCommand, MapCommands, MoveActionParams, TestCamera2D, UserInput,
-        Walkable,
-    },
+    prelude::{FovOccluder, GameMap, KeyInput, MapCommand, MapCommands, TestCamera2D, UserInput},
     IntVector2,
 };
 
 use crate::{
-    components::{Health, MoveIntent, Player, Position},
+    components::{MoveIntent, PickIntent, Player, Position, TestCommand, UseKind},
+    events::ChangeGameStateEvent,
+    resources::{CurrentCellInfo, GameContext, GameState},
     tiles::TestTile,
     FovData,
 };
@@ -32,46 +26,108 @@ pub fn update_player_position(
     _game_map: Res<GameMap<TestTile>>,
     player_query: Query<(Entity, &Position), With<Player>>,
     mut commands: Commands,
+    mut writer: EventWriter<ChangeGameStateEvent>,
+    game_ctx: Res<GameContext>,
 ) {
     let _span = tracy_client::span!();
     // let mut position = player_query.single_mut();
-    let (player_id, position) = player_query.single();
-    let mut dx = IntVector2::default();
-    if user_input.key_input == KeyInput::Right {
-        dx.x += 1;
-    }
 
-    if user_input.key_input == KeyInput::Left {
-        dx.x -= 1;
-    }
+    // if user_input.key_input == KeyInput::Key(KeyCode::Space) {
+    //     let tile = _game_map.get(position.x, position.y).unwrap();
+    //     test_external_command(&mut commands, &tile);
+    // }
 
-    if user_input.key_input == KeyInput::Up {
-        dx.y -= 1;
-    }
+    match game_ctx.state {
+        GameState::PlayGame => {
+            let (player_id, position) = player_query.single();
+            let mut dx = IntVector2::default();
+            if user_input.key_input == KeyInput::Right {
+                dx.x += 1;
+            }
 
-    if user_input.key_input == KeyInput::Down {
-        dx.y += 1;
-    }
+            if user_input.key_input == KeyInput::Left {
+                dx.x -= 1;
+            }
 
-    if dx != IntVector2::default() {
-        println!(
-            "target: {:?}",
-            IntVector2::new(position.x + dx.x, position.y + dx.y)
-        );
-        commands.entity(player_id).insert(MoveIntent {
-            target: IntVector2::new(position.x + dx.x, position.y + dx.y),
-        });
-        // action_queue.add(EntityAction::Move(
-        //     MoveActionParams {
-        //         dx,
-        //         start: IntVector2::new(position.x, position.y),
-        //         entity: player_id,
-        //         // target_entity: None,
-        //         // target_items: vec![],
-        //     },
-        //     None, // Some(|params| EntityActivatorFunctionResult::Ok),
-        // ));
+            if user_input.key_input == KeyInput::Up {
+                dx.y -= 1;
+            }
+
+            if user_input.key_input == KeyInput::Down {
+                dx.y += 1;
+            }
+
+            if dx != IntVector2::default() {
+                println!(
+                    "target: {:?}",
+                    IntVector2::new(position.x + dx.x, position.y + dx.y)
+                );
+                commands.entity(player_id).insert(MoveIntent {
+                    target: IntVector2::new(position.x + dx.x, position.y + dx.y),
+                });
+            }
+
+            if user_input.key_input == KeyInput::Key(KeyCode::I) {
+                writer.send(ChangeGameStateEvent::new(GameState::ShowInventory));
+            }
+        }
+        GameState::ShowInventory => {
+            if user_input.key_input == KeyInput::Quit {
+                writer.send(ChangeGameStateEvent::new(GameState::PlayGame));
+            }
+        }
+        GameState::None => {}
     }
+    // if user_input.key_input == KeyInput::Key(KeyCode::Space) {
+    //     commands.entity(player_id).insert(MoveIntent {
+    //         target: IntVector2::new(position.x, position.y),
+    //     });
+    // }
+}
+
+pub fn user_interact(
+    user_input: Res<UserInput>,
+    current_cell_info: Res<CurrentCellInfo>,
+    player_query: Query<(Entity), With<Player>>,
+    mut commands: Commands,
+) {
+    let key_input = user_input.key_input;
+    let player_id = player_query.single();
+
+    if key_input == KeyInput::None {
+        return;
+    }
+    let _span = tracy_client::span!("user_interact");
+    tracing::debug!(
+        "key_input: {:?} - key interactions{:?}",
+        key_input,
+        current_cell_info
+            .interactions()
+            .iter()
+            .map(|x| x.key)
+            .collect::<Vec<_>>()
+    );
+
+    for interaction in current_cell_info.interactions().iter() {
+        if key_input == interaction.key {
+            // commands.add(interaction.clone());
+            match interaction.kind {
+                UseKind::Pick => {
+                    commands
+                        .entity(player_id)
+                        .insert(PickIntent::from(current_cell_info.current_tile()));
+                }
+                UseKind::None => {}
+            }
+            // commands.entity(player_id).insert(interaction.clone());
+        }
+    }
+}
+
+pub fn test_external_command(commands: &mut Commands, tile: &TestTile) {
+    println!("test_external_command");
+
+    commands.add(TestCommand {});
 }
 
 pub fn update_camera(

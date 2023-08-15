@@ -53,7 +53,7 @@ pub fn debug_ui(
         vec2(viewport.x + viewport.width + 100., viewport.y),
         vec2(1020., 800.),
     )
-    .movable(false)
+    .movable(true)
     .ui(&mut root_ui(), |ui| {
         ui.label(
             None,

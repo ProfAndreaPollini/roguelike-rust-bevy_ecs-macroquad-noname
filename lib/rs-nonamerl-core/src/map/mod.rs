@@ -68,9 +68,16 @@ impl<T: Tile> GameMap<T> {
         self.grid.read().unwrap().is_empty()
     }
 
-    fn add_item(&self, position: IntVector2, item: Entity) {
+    pub fn add_item(&self, position: IntVector2, item: Entity) {
         if let Some(tile) = self.grid.write().unwrap().at_mut(position) {
             tile.add_item(item);
+        }
+    }
+    pub fn items(&self, position: IntVector2) -> Option<Vec<Entity>> {
+        if let Some(tile) = self.grid.write().unwrap().at_mut(position) {
+            tile.items()
+        } else {
+            None
         }
     }
 
@@ -100,6 +107,12 @@ impl<T: Tile> GameMap<T> {
     }
 }
 
+impl<T: Tile> Default for GameMap<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct MapVisibleTilesIter<'a, T: Tile> {
     map: &'a GameMap<T>,
     extent: &'a IntExtent2,
@@ -124,7 +137,7 @@ impl<'a, T: Tile> Iterator for MapVisibleTilesIter<'a, T> {
             return None;
         }
 
-        let mut pos = self.current;
+        let pos = self.current;
 
         self.current.x += 1; // = IntVector2::new(self.current.x + 1, self.current.y);
 

@@ -83,15 +83,16 @@ impl Walkable for TestTile {
 }
 
 impl ItemContainer for TestTile {
-    fn items(&self) -> Option<&[Entity]> {
+    fn items(&self) -> Option<Vec<Entity>> {
         if self.items.is_empty() {
             None
         } else {
-            Some(&self.items)
+            Some(self.items.clone())
         }
     }
 
     fn add_item(&mut self, item: Entity) {
+        println!("add_item: {:?}", item);
         self.items.push(item);
     }
 

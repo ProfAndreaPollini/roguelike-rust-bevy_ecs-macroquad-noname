@@ -28,10 +28,10 @@ where
         room1: &Room,
         room2: &Room,
     ) -> Vec<IntVector2> {
-        let mut rng = rand::thread_rng();
+        // let mut rng = rand::thread_rng();
 
-        let mut start = room1.center();
-        let mut end = room2.center();
+        let start = room1.center();
+        let end = room2.center();
 
         let path = map_builder.map.line(start, end);
 
@@ -149,10 +149,10 @@ impl<T: Tile> MapBuilderAlgorithm<T> for RoomBuilder<T> {
             let room2 = &rooms[i + 1];
 
             let corridor = self.connect_rooms(map_builder, room1, room2);
-            let mut rng = rand::thread_rng();
+            // let mut rng = rand::thread_rng();
             for cell in corridor.iter() {
                 let tile = map_builder.tiles.get("floor").unwrap().clone();
-                let wall_tile = map_builder.tiles.get("wall").unwrap().clone();
+                // let wall_tile = map_builder.tiles.get("wall").unwrap().clone();
                 let offset = 3; //rng.gen_range(0..5);
                 for i in -offset + 1..offset {
                     map_builder.map.set(cell.x + i, cell.y, tile.clone());

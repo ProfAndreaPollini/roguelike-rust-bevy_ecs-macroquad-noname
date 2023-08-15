@@ -46,7 +46,7 @@ pub trait Walkable {
 }
 
 pub trait ItemContainer {
-    fn items(&self) -> Option<&[Entity]> {
+    fn items(&self) -> Option<Vec<Entity>> {
         None
     }
     fn add_item(&mut self, _item: Entity) {}

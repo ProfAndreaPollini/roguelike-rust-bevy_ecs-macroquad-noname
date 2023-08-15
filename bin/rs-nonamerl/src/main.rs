@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 
 use bevy_ecs::{
-    prelude::{Schedule, World},
+    prelude::{Events, Schedule, World},
     schedule::IntoSystemConfigs,
     system::Resource,
 };
@@ -16,10 +16,18 @@ use rs_nonamerl_core::{
     Dimension2, IntVector2,
 };
 
+use ::rand::{seq::IteratorRandom, Rng};
+
+mod commands;
 mod components;
+mod events;
+mod resources;
 mod tiles;
 
-use components::*;
+use commands::*;
+use components::{CharacterInfo, *};
+use events::*;
+use resources::*;
 
 mod systems;
 
@@ -63,6 +71,47 @@ pub struct LevelData {
     // pub corridors: Vec<Vec<IntVector2>>,
 }
 
+pub fn create_player(world: &mut World) {
+    let strength = rand::gen_range(1, 20);
+    let stamina = rand::gen_range(1, 20);
+    let intelligence = rand::gen_range(1, 20);
+    let dexterity = rand::gen_range(1, 20);
+    let hp = rand::gen_range(100, 200);
+    let xp = strength + stamina;
+    let gold = rand::gen_range(50, 100);
+
+    world.spawn((
+        Position { x: 0, y: 0 },
+        Player {},
+        SpriteDrawInfo {
+            sprite_info: "hero",
+        },
+        Health {
+            current: hp,
+            max: hp,
+        },
+        Inventory {
+            items: Vec::new(),
+            capacity: 10,
+        },
+        CharacterInfo {
+            name: "Player".to_owned(),
+            strength,
+            stamina,
+            intelligence,
+            dexterity,
+            xp: Xp {
+                current: xp,
+                max: xp,
+            },
+            gold: Gold {
+                current: gold,
+                total: gold,
+            },
+        },
+    ));
+}
+
 #[macroquad::main(window_conf)]
 async fn main() {
     init_log();
@@ -103,23 +152,33 @@ async fn main() {
     world.insert_resource(EntityActionQueue::default());
     // world.insert_resource(Vec::<Room>::default());
     world.insert_resource(LevelData::default());
+    world.insert_resource(CurrentCellInfo::default());
+    world.insert_resource(GameContext::default());
+    world.init_resource::<Events<ChangeGameStateEvent>>();
+    world.init_resource::<Events<UpdateAvailableInteractionsEvent>>();
 
     // create player
-    world.spawn((
-        Position { x: 0, y: 0 },
-        Player {},
-        SpriteDrawInfo {
-            sprite_info: "hero",
-        },
-        Health {
-            current: 100,
-            max: 100,
-        },
-    ));
-
+    // world.spawn((
+    //     Position { x: 0, y: 0 },
+    //     Player {},
+    //     SpriteDrawInfo {
+    //         sprite_info: "hero",
+    //     },
+    //     Health {
+    //         current: 100,
+    //         max: 100,
+    //     },
+    //     Inventory {
+    //         items: Vec::new(),
+    //         capacity: 10,
+    //     },
+    // ));
+    create_player(&mut world);
     let mut setup_schedule = Schedule::default();
     setup_schedule.add_systems(generate_world_map);
+    setup_schedule.add_systems(setup_ui);
     setup_schedule.add_systems(spawn_enemies.after(generate_world_map));
+    setup_schedule.add_systems(spawn_items.after(generate_world_map));
 
     let mut input_schedule = Schedule::default();
     input_schedule.set_executor_kind(bevy_ecs::schedule::ExecutorKind::SingleThreaded);
@@ -127,10 +186,13 @@ async fn main() {
     // input_schedule.add_systems(test);
 
     input_schedule.add_systems(update_user_input);
+    input_schedule.add_systems(change_game_state);
+    input_schedule.add_systems(update_available_interactions);
 
     // Create a new Schedule, which defines an execution strategy for Systems
     let mut update_schedule = Schedule::default();
     update_schedule.add_systems(update_player_position);
+    update_schedule.add_systems(on_player_moved_system.after(update_player_position));
     // update_schedule.add_systems(process_actions.after(update_player_position));
 
     update_schedule.add_systems(update_camera);
@@ -139,11 +201,14 @@ async fn main() {
             .after(update_camera)
             .after(update_player_position),
     );
-    update_schedule.add_systems(move_intent_system);
+    update_schedule
+        .add_systems((move_intent_system, pick_intent_system).after(update_player_position));
+    update_schedule.add_systems(user_interact);
 
     let mut draw_schedule = Schedule::default();
     draw_schedule.set_executor_kind(bevy_ecs::schedule::ExecutorKind::SingleThreaded);
     // Add our system to the schedule
+    draw_schedule.add_systems(draw_ui);
     draw_schedule.add_systems(debug_ui);
     draw_schedule.add_systems(draw_player.after(draw_game_map));
     draw_schedule.add_systems(draw_enemies.after(draw_game_map));

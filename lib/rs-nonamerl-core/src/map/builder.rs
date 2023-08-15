@@ -1,9 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use bevy_ecs::system::In;
 use rand::seq::{IteratorRandom, SliceRandom};
 
-use crate::{prelude::Tile, Dimension2, IntExtent2, IntVector2};
+use crate::{prelude::Tile, IntExtent2, IntVector2};
 
 use super::{GameMap, Room};
 
