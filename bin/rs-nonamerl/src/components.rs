@@ -3,7 +3,7 @@ use std::fmt::Display;
 
 use bevy_ecs::{
     prelude::{Component, Entity},
-    system::{Command, Commands},
+    system::Command,
     world::World,
 };
 use rs_nonamerl_core::{prelude::KeyInput, IntVector2};
@@ -110,14 +110,32 @@ pub struct MoveIntent {
     pub target: IntVector2,
 }
 
-// pub enum Effect {
-//     None,
-// }
-
 #[derive(Component, Default, Debug, Clone)]
 pub struct PickIntent {
     pub item: Option<Entity>,
     pub tile: Option<TestTile>,
+}
+
+#[derive(Component, Default, Debug, Clone)]
+pub struct DrinkIntent {
+    pub item: Option<Entity>,
+    pub effect: Option<DrinkEffect>,
+}
+
+impl DrinkIntent {
+    pub fn new(entity: Entity, effect: DrinkEffect) -> Self {
+        Self {
+            item: Some(entity),
+            effect: Some(effect),
+        }
+    }
+
+    pub fn from(tile: TestTile, effect: DrinkEffect) -> Self {
+        Self {
+            item: Some(tile.items.first().cloned().unwrap()),
+            effect: Some(effect),
+        }
+    }
 }
 
 impl PickIntent {
@@ -137,10 +155,19 @@ impl PickIntent {
     }
 }
 
+#[derive(Default, Debug, Clone)]
+pub struct DrinkEffect {
+    pub health: i32,
+    pub stamina: i32,
+    pub mana: i32,
+}
+
 #[derive(Debug, Clone)]
 pub enum UseKind {
     None,
     Pick,
+    Drink(DrinkEffect),
+    Eat,
 }
 
 impl Display for UseKind {
@@ -148,6 +175,8 @@ impl Display for UseKind {
         match self {
             UseKind::None => write!(f, "None"),
             UseKind::Pick => write!(f, "Pick"),
+            UseKind::Drink(_) => write!(f, "Drink"),
+            UseKind::Eat => write!(f, "Eat"),
         }
     }
 }
@@ -165,7 +194,7 @@ pub struct Interaction {
 }
 
 impl Command for Interaction {
-    fn apply(self, world: &mut World) {
+    fn apply(self, _world: &mut World) {
         tracing::info!("Interaction::apply [ {:?} ]", self.kind);
     }
 }
@@ -215,32 +244,17 @@ impl Interactions {
 //     }
 // }
 
-#[derive(Debug, Clone)]
-pub struct MoveAction {
-    pub entity: Entity,
-    pub source: IntVector2,
-    pub target: IntVector2,
-}
+// #[derive(Debug, Clone)]
+// pub struct UseItemAction {
+//     pub entity: Entity,
+//     pub item: Entity,
+// }
 
-impl Command for MoveAction {
-    fn apply(self, world: &mut World) {
-        let mut position = world.get_mut::<Position>(self.entity).unwrap();
-        position.x = self.target.x;
-        position.y = self.target.y;
-    }
-}
+// #[derive(Debug, Clone)]
+// pub struct TestCommand {}
 
-#[derive(Debug, Clone)]
-pub struct UseItemAction {
-    pub entity: Entity,
-    pub item: Entity,
-}
-
-#[derive(Debug, Clone)]
-pub struct TestCommand {}
-
-impl Command for TestCommand {
-    fn apply(self, _world: &mut World) {
-        tracing::info!("TestCommand::apply");
-    }
-}
+// impl Command for TestCommand {
+//     fn apply(self, _world: &mut World) {
+//         tracing::info!("TestCommand::apply");
+//     }
+// }

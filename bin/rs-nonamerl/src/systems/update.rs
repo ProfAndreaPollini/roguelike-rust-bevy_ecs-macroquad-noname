@@ -13,7 +13,7 @@ use rs_nonamerl_core::{
 };
 
 use crate::{
-    components::{MoveIntent, PickIntent, Player, Position, TestCommand, UseKind},
+    components::{DrinkIntent, MoveIntent, PickIntent, Player, Position, UseKind},
     events::ChangeGameStateEvent,
     resources::{CurrentCellInfo, GameContext, GameState},
     tiles::TestTile,
@@ -117,18 +117,26 @@ pub fn user_interact(
                         .entity(player_id)
                         .insert(PickIntent::from(current_cell_info.current_tile()));
                 }
+                UseKind::Drink(ref effect) => {
+                    tracing::info!("Drink!  effect: {:?}", effect);
+                    commands.entity(player_id).insert(DrinkIntent::from(
+                        current_cell_info.current_tile().unwrap(),
+                        effect.clone(),
+                    ));
+                }
                 UseKind::None => {}
+                _ => {}
             }
             // commands.entity(player_id).insert(interaction.clone());
         }
     }
 }
 
-pub fn test_external_command(commands: &mut Commands, tile: &TestTile) {
-    println!("test_external_command");
+// pub fn test_external_command(commands: &mut Commands, tile: &TestTile) {
+//     println!("test_external_command");
 
-    commands.add(TestCommand {});
-}
+//     commands.add(TestCommand {});
+// }
 
 pub fn update_camera(
     mut camera: ResMut<TestCamera2D>,

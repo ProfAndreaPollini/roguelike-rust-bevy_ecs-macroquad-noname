@@ -1,6 +1,6 @@
 use bevy_ecs::{
-    entity,
     prelude::{Entity, EventWriter},
+    query::With,
     system::{Command, Commands, Query, Res},
     world::World,
 };
@@ -23,18 +23,20 @@ pub struct PickAction {
 
 impl Command for PickAction {
     fn apply(self, world: &mut World) {
-        let mut game_map = world.get_resource_mut::<GameMap<TestTile>>().unwrap();
+        let game_map = world.get_resource_mut::<GameMap<TestTile>>().unwrap();
         let mut tile = game_map
             .get(self.tile_position.x, self.tile_position.y)
             .unwrap();
         tile.items.retain(|item| *item != self.item);
         game_map.set(self.tile_position.x, self.tile_position.y, tile);
-        let (player, mut inventory) = world
-            .query::<(Entity, &mut Inventory)>()
+        let (mut inventory) = world
+            .query::<(&mut Inventory, With<Player>)>()
             .get_single_mut(world)
             .unwrap();
 
-        inventory.items.push(self.item);
+        //TODO: remove position from item
+
+        inventory.0.items.push(self.item);
     }
 }
 

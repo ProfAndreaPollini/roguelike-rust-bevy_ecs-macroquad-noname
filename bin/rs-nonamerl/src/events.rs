@@ -1,6 +1,6 @@
-use bevy_ecs::prelude::{Entity, Event};
+use bevy_ecs::prelude::Event;
 
-use crate::{components::Position, resources::GameState, tiles::TestTile};
+use crate::{components::Position, resources::GameState};
 
 #[derive(Debug, Event)]
 pub struct ChangeGameStateEvent {

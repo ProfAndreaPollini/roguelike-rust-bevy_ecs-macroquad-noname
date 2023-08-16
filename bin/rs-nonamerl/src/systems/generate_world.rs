@@ -16,8 +16,8 @@ use rs_nonamerl_core::{
 
 use crate::{
     components::{
-        Enemy, Health, Interaction, Interactions, Item, ItemKind, ModHealth, Player, Position,
-        SpriteDrawInfo, UseKind,
+        DrinkEffect, Enemy, Health, Interaction, Interactions, Item, ItemKind, ModHealth, Player,
+        Position, SpriteDrawInfo, UseKind,
     },
     resources::{GameContext, GameState},
     tiles::{TestTile, TileKind},
@@ -158,7 +158,17 @@ pub fn spawn_items(
     tracing::info!("items: {:?}", items);
 
     let interactions = Interactions {
-        interactions: vec![Interaction::new(KeyInput::Key(KeyCode::E), UseKind::Pick)],
+        interactions: vec![
+            Interaction::new(KeyInput::Key(KeyCode::E), UseKind::Pick),
+            Interaction::new(
+                KeyInput::Key(KeyCode::Y),
+                UseKind::Drink(DrinkEffect {
+                    health: 10,
+                    stamina: 5,
+                    mana: 5,
+                }),
+            ),
+        ],
     };
 
     let item_id = commands

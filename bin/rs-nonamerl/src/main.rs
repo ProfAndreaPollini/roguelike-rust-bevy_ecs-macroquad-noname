@@ -16,8 +16,6 @@ use rs_nonamerl_core::{
     Dimension2, IntVector2,
 };
 
-use ::rand::{seq::IteratorRandom, Rng};
-
 mod commands;
 mod components;
 mod events;
@@ -142,38 +140,26 @@ async fn main() {
         TestCamera2D::from_viewport(Vec2::default(), &viewport, 1.2, Dimension2::new(12, 12));
 
     let mut world = World::default();
+
+    // init resources
     world.insert_resource(UserInput::default());
     world.insert_resource(viewport);
     world.insert_resource(camera);
     world.insert_resource(FovData::default());
-    // world.insert_resource(game_map);
     world.insert_resource(sprite_container);
     world.insert_resource(MapCommands::default());
     world.insert_resource(EntityActionQueue::default());
-    // world.insert_resource(Vec::<Room>::default());
     world.insert_resource(LevelData::default());
     world.insert_resource(CurrentCellInfo::default());
     world.insert_resource(GameContext::default());
+
+    // init events
     world.init_resource::<Events<ChangeGameStateEvent>>();
     world.init_resource::<Events<UpdateAvailableInteractionsEvent>>();
 
-    // create player
-    // world.spawn((
-    //     Position { x: 0, y: 0 },
-    //     Player {},
-    //     SpriteDrawInfo {
-    //         sprite_info: "hero",
-    //     },
-    //     Health {
-    //         current: 100,
-    //         max: 100,
-    //     },
-    //     Inventory {
-    //         items: Vec::new(),
-    //         capacity: 10,
-    //     },
-    // ));
     create_player(&mut world);
+
+    // setup schedule
     let mut setup_schedule = Schedule::default();
     setup_schedule.add_systems(generate_world_map);
     setup_schedule.add_systems(setup_ui);
@@ -201,8 +187,9 @@ async fn main() {
             .after(update_camera)
             .after(update_player_position),
     );
-    update_schedule
-        .add_systems((move_intent_system, pick_intent_system).after(update_player_position));
+    update_schedule.add_systems(
+        (move_intent_system, pick_intent_system, drink_intent_system).after(update_player_position),
+    );
     update_schedule.add_systems(user_interact);
 
     let mut draw_schedule = Schedule::default();

@@ -1,21 +1,34 @@
 use bevy_ecs::{
     prelude::{Entity, EventWriter},
     query::{Changed, With},
-    system::{Commands, Query, Res, ResMut},
+    system::{Command, Commands, Query, Res},
     world::World,
 };
 use rs_nonamerl_core::{prelude::GameMap, IntVector2};
 
 use crate::{
-    commands,
-    components::{Interaction, Interactions, MoveAction, MoveIntent, Player, Position},
+    components::{MoveIntent, Player, Position},
     events::UpdateAvailableInteractionsEvent,
-    resources::CurrentCellInfo,
     tiles::TestTile,
     Walkable,
 };
 
 use tracing::instrument;
+
+#[derive(Debug, Clone)]
+pub struct MoveAction {
+    pub entity: Entity,
+    pub source: IntVector2,
+    pub target: IntVector2,
+}
+
+impl Command for MoveAction {
+    fn apply(self, world: &mut World) {
+        let mut position = world.get_mut::<Position>(self.entity).unwrap();
+        position.x = self.target.x;
+        position.y = self.target.y;
+    }
+}
 
 #[instrument(skip(query, writer))]
 pub fn on_player_moved_system(

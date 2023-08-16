@@ -1,4 +1,7 @@
 use bevy_ecs::{
+    archetype::Archetypes,
+    component::ComponentId,
+    prelude::Entity,
     query::With,
     system::{Commands, Query, Res},
     world::World,
@@ -10,7 +13,7 @@ use macroquad::{
 use rs_nonamerl_core::prelude::Viewport;
 
 use crate::{
-    components::{CharacterInfo, Health, Inventory, Player},
+    components::{CharacterInfo, Health, Inventory, Item, ModHealth, Player},
     resources::{CurrentCellInfo, GameContext, UiConfig},
 };
 
@@ -61,12 +64,26 @@ pub fn setup_ui(world: &mut World) {
     });
 }
 
+pub fn get_components_for_entity<'a>(
+    entity: &Entity,
+    archetypes: &'a Archetypes,
+) -> Option<impl Iterator<Item = ComponentId> + 'a> {
+    for archetype in archetypes.iter() {
+        if archetype.entities().iter().any(|e| e.entity() == *entity) {
+            return Some(archetype.components());
+        }
+    }
+    None
+}
+
 pub fn draw_ui(
     ui_config: Res<UiConfig>,
     viewport: Res<Viewport>,
     query: Query<(&CharacterInfo, &Health, &Inventory), With<Player>>,
-    available_interactions: Res<CurrentCellInfo>,
+    current_cell_info: Res<CurrentCellInfo>,
     game_ctx: Res<GameContext>,
+    world: &World,
+    archetypes: &Archetypes,
 ) {
     let ui_skin = &ui_config.skin;
     let label_title_skin = &ui_config.label_title_skin;
@@ -87,15 +104,6 @@ pub fn draw_ui(
         ui.label(None, "Player UI");
         ui.pop_skin();
 
-        // ui.group(hash!("stats"), vec2(500., 500.), |ui| {
-        //     ui.label(None, "Stats");
-
-        //     ui.label(None, &format!("Health: {}/{}", health.current, health.max));
-        //     let mut canvas = ui.canvas();
-        //     let health_rect = Rect::new(0., 0., health.current as f32, 20.);
-        //     canvas.rect(health_rect, DARKGREEN, DARKGREEN);
-        //     ui.separator();
-        // });
         ui.label(None, &format!("Health: {}/{}", health.current, health.max));
         ui.label(None, &format!("Strength: {}", character_info.strength));
         ui.label(None, &format!("Stamina: {}", character_info.stamina));
@@ -131,20 +139,35 @@ pub fn draw_ui(
         ui.push_skin(label_title_skin);
         ui.label(
             None,
-            &format!("Interactions [{}:?]", available_interactions.len()),
+            &format!("Interactions [{}:?]", current_cell_info.len()),
         );
         ui.pop_skin();
-        available_interactions
+        current_cell_info
             .interactions()
             .iter()
             .for_each(|interaction| {
                 ui.label(None, &format!("{}: {}", interaction.key, interaction.kind));
             });
         ui.push_skin(label_title_skin);
-        ui.label(None, &format!("Game Context"));
+        ui.label(None, "Game Context");
         ui.pop_skin();
 
         ui.label(None, &format!("Current: {:?}", game_ctx.state));
         ui.label(None, &format!("Inventory: {:?}", inventory.items));
+
+        ui.push_skin(label_title_skin);
+        ui.label(None, "Current Cell Items");
+        ui.pop_skin();
+
+        if let Some(tile) = current_cell_info.current_tile() {
+            let tile_items = tile.items.clone();
+            tile_items.iter().for_each(|item| {
+                let item_data = world.get::<Item>(*item).unwrap();
+                ui.label(None, &format!("{:?}: {:?}", item_data.kind, item_data.name));
+                if let Some(mod_health) = world.get::<ModHealth>(*item) {
+                    ui.label(None, &format!("Inventory: {:?}", mod_health));
+                }
+            });
+        }
     });
 }
